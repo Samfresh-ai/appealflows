@@ -26,7 +26,7 @@ AppealFlow should feel like a civic case desk, not an AI dashboard. The UI uses 
 - Devvit CLI available locally: `@devvit/cli/0.12.22`.
 - `devvit.json` validates against Reddit's config schema.
 - Syntax/import check passes: `npm run check`.
-- Unit tests pass: `npm test` — 6/6.
+- Unit tests pass: `npm test` — 11/11.
 - Production dependency audit passes: `npm audit --omit=dev` — 0 vulnerabilities.
 - Full audit has 4 low dev-only findings from Devvit CLI's `inquirer → external-editor → tmp` chain; no fix is currently published upstream.
 - UI screenshots captured:
@@ -36,6 +36,6 @@ AppealFlow should feel like a civic case desk, not an AI dashboard. The UI uses 
 ## Live-gated limitations
 
 - `src/server/lib/redditAdapter.js` isolates live Devvit calls that still need real subreddit playtest verification.
-- `modmail-sync` is a placeholder until the exact ModMail query shape is validated.
+- `modmail-sync` has a parser/import path; live ModMail query behavior still needs playtest validation.
 - The dashboard does not show placeholder appeal records. It stays empty when live Devvit data is unavailable.
 - Upload/playtest/publish are blocked until the Devvit CLI is authenticated with the app owner's Reddit account.

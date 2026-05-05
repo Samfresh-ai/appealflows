@@ -1,82 +1,162 @@
 # AppealFlow
 
-A senior-level Reddit Mod Tools hackathon build: a humane, stateful ban appeal workflow built for Devvit.
+AppealFlow is a Devvit app for turning ban appeals into a tracked moderation workflow.
 
-AppealFlow turns ban appeals from loose modmail threads into tracked cases:
+Today, ban appeals usually land in modmail as loose text threads. There is no required intake shape, no owner, no SLA, no audit trail, and no reliable way for a user or mod team to know whether a case is actually moving. AppealFlow makes appeals first-class cases: structured intake, routed review, deadline enforcement, clear decisions, and a closed loop back to the user.
 
-`SUBMITTED → ASSIGNED → UNDER_REVIEW → UPHELD | REDUCED | OVERTURNED → CLOSED`
+## What it does
 
-with escalation, SLA reminders, structured mod decisions, plain-language user responses, and an audit trail.
+- Gives banned users a structured appeal form with five required decision-quality answers.
+- Prevents duplicate open appeals and enforces cooldowns after upheld decisions.
+- Verifies that the requester is currently banned before creating a case.
+- Routes each case to a reviewer or escalates when no reviewer is available.
+- Shows moderators a queue with the appeal, ban context, SLA state, and valid actions.
+- Requires a moderator note before any decision is applied.
+- Supports uphold, reduce, overturn, and escalate decisions.
+- Sends plain-language user notifications after resolution.
+- Runs scheduled SLA sweeps for reminders, stale cases, and escalation.
+- Keeps analytics for volume, outcomes, SLA compliance, rules, and reviewer handling.
 
-## What is built in this scaffold
+## Workflow model
 
-- Static Devvit Web custom post UI:
-  - `public/appeal.html` — appeal intake entry point
-  - `public/dashboard.html` — moderator case dashboard
-- Server/API shape:
-  - appeal creation
-  - queue listing
-  - case detail
-  - state transitions
-  - SLA sweep
-  - modmail sync placeholder
-  - menu actions to create intake/dashboard posts
-- Safety and production guards:
-  - moderator-only dashboard/action APIs
-  - requester self-submit check where Devvit user context is available
-  - live banned-user eligibility check via `getBannedUsers`
-  - subreddit-scoped Redis indexes
-  - patched `protobufjs` override for the Devvit dependency-chain advisory
-- Core domain logic:
-  - state machine validation
-  - appeal schema
-  - SLA status
-  - resolution templates
-  - Redis-compatible storage abstraction
-- Human-friendly UI language and restrained Civic Casefile design.
+```text
+SUBMITTED
+  -> ASSIGNED
+  -> UNDER_REVIEW
+  -> UPHELD | REDUCED | OVERTURNED
+  -> CLOSED
 
-## Important implementation stance
+SUBMITTED / ASSIGNED / UNDER_REVIEW
+  -> STALE
+  -> ESCALATED
+```
 
-Banned-user access to a Devvit custom post is not assumed. AppealFlow supports the custom-post form, but the production path must also support modmail-driven intake.
+Every transition is timestamped and stored in the case history. Invalid transitions are rejected by the domain layer, not just hidden in the UI.
 
-The app should tell banned users:
+## Screenshots
 
-> Reply to this ban message with `/appeal` and answer the three questions below.
+### Appeal intake
 
-The scheduler can sync those modmail conversations and create structured appeal records.
+![Appeal intake](screenshots/appeal-intake.png)
 
-## Commands
+### Moderator dashboard
 
-Use the local Devvit CLI installed in this package:
+![Moderator dashboard](screenshots/mod-dashboard.png)
+
+### Mobile intake
+
+![Mobile appeal intake](screenshots/appeal-intake-mobile.png)
+
+## Architecture
+
+```text
+public/
+  appeal.html / appeal.js       User-facing appeal intake and status view
+  dashboard.html / dashboard.js Moderator queue, detail panel, analytics, settings shell
+  styles.css                    Shared UI system
+
+src/shared/
+  state.js                      State machine, validation, SLA helpers, cooldown rules
+  templates.js                  Mod/user notification copy
+
+src/server/
+  index.js                      Hono routes for Devvit Web
+  lib/appealService.js          Application workflow orchestration
+  lib/storage.js                Redis-backed case storage with subreddit-scoped indexes
+  lib/redditAdapter.js          Reddit API boundary for bans, rules, modmail, reviewers, notifications
+
+tests/
+  state.test.js                 State, storage, cooldown, SLA, decision, and modmail-sync coverage
+```
+
+## API surface
+
+Public Devvit Web endpoints:
+
+- `GET /api/intake` — current user, subreddit rules, and app settings for the intake screen.
+- `GET /api/appeals/status?username=...` — existing appeal/cooldown status for the requester.
+- `POST /api/appeals` — create a new appeal after eligibility checks.
+- `GET /api/dashboard` — moderator dashboard data.
+- `GET /api/appeals/:id` — case detail.
+- `POST /api/appeals/:id/start-review` — move an assigned case into review.
+- `POST /api/appeals/:id/escalate` — escalate with a required note.
+- `POST /api/appeals/:id/resolve` — uphold, reduce, or overturn with a required note.
+
+Internal Devvit endpoints:
+
+- `POST /internal/scheduler/sla-sweep`
+- `POST /internal/scheduler/modmail-sync`
+- `POST /internal/settings/validate-sla-days`
+- `POST /internal/settings/validate-cooldown-days`
+- `POST /internal/menu/create-intake`
+- `POST /internal/menu/open-dashboard`
+
+## Safety and production guards
+
+AppealFlow does not rely on UI hiding for safety.
+
+- Moderator dashboard and case actions are gated through Devvit request context.
+- Appeal creation checks the logged-in requester where context is available.
+- Appeal creation verifies ban status with Reddit before opening a case.
+- Redis indexes are scoped by subreddit to avoid cross-community data leakage.
+- Resolution actions require a human-written note.
+- SLA reminders are idempotent; a reminder is not spammed repeatedly for the same case.
+- The dashboard does not render local sample appeal records when live data is unavailable.
+- `.env`, `node_modules`, build output, and old generated screenshots are ignored.
+
+## Install and local checks
 
 ```bash
-cd appealflow
 npm install
 npm run check
 npm test
-npm run whoami
-DEVVIT_SUBREDDIT=your_small_test_sub npm run dev
-npm run upload
+npm run build
+npm audit --omit=dev
 ```
 
-`npm run whoami` must succeed before playtest/upload/publish can work.
+Expected current result:
 
-## MVP path
+- `npm run check` passes.
+- `npm test` passes 11 tests.
+- `npm run build` produces the Devvit server bundle.
+- `npm audit --omit=dev` reports 0 vulnerabilities.
 
-1. Log in with Devvit: `npm run whoami` should show the Reddit developer account.
-2. Playtest on a small subreddit: `DEVVIT_SUBREDDIT=your_small_test_sub npm run dev`.
+## Devvit workflow
+
+The package uses local Devvit CLI scripts:
+
+```bash
+npm run whoami
+npm run dev
+npm run upload
+npm run publish
+```
+
+`npm run whoami` must show a logged-in Reddit developer account before playtest, upload, or publish will work.
+
+For a real validation pass:
+
+1. Create or use a small test subreddit that can install private Devvit uploads.
+2. Run `npm run dev` and install/playtest the app.
 3. Create the intake and dashboard posts from the subreddit menu.
-4. Submit a real appeal from a banned test account and confirm it routes to a mod.
-5. Resolve the case and verify the user notification, ban action, SLA state, and dashboard analytics.
-6. Upload/publish only after the live Reddit API paths are proven in playtest logs.
+4. Ban a test account and submit an appeal from that account.
+5. Confirm duplicate-open-appeal blocking and cooldown behavior.
+6. Resolve the case and verify the user notification and ban action.
+7. Let the SLA scheduler run or call the scheduler endpoint in playtest to verify reminder/escalation behavior.
 
-## Official docs used
+## Current honest limit
 
-- Devvit Web overview: https://developers.reddit.com/docs/capabilities/devvit-web/devvit_web_overview
-- Devvit config: https://developers.reddit.com/docs/capabilities/devvit-web/devvit_web_configuration
+The code is built and locally validated, but Reddit-hosted production behavior still needs Devvit playtest with an authenticated developer account. That is where Reddit API method behavior, modmail access, ban status reads, and custom-post access for banned users must be proven.
+
+## Why this matters
+
+Good moderation is not just removal speed. It is consistency, accountability, and closure. AppealFlow gives mod teams a process they can measure and gives banned users a clear answer instead of a forgotten thread.
+
+## Official references
+
+- Devvit Web: https://developers.reddit.com/docs/capabilities/devvit-web/devvit_web_overview
+- Devvit configuration: https://developers.reddit.com/docs/capabilities/devvit-web/devvit_web_configuration
 - Custom posts: https://developers.reddit.com/docs/capabilities/creating_custom_post
-- Forms: https://developers.reddit.com/docs/capabilities/client/forms
 - Scheduler: https://developers.reddit.com/docs/capabilities/server/scheduler
 - Redis: https://developers.reddit.com/docs/capabilities/server/redis
 - Reddit API: https://developers.reddit.com/docs/capabilities/server/reddit-api
-- ModMailService: https://developers.reddit.com/docs/api/redditapi/models/classes/ModMailService
