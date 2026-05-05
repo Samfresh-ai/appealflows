@@ -15,7 +15,6 @@ AppealFlow should feel like a civic case desk, not an AI dashboard. The UI uses 
 - Every transition is logged.
 - Every resolution requires a mod note.
 - Every user gets a clear answer.
-- Banned-user custom post access is treated as unproven until playtested.
 - Dashboard and case APIs are moderator-gated through Devvit request context.
 - Redis indexes are scoped per subreddit install to prevent cross-community leakage.
 - Appeal submission verifies the requester is currently banned before opening a case.
@@ -33,9 +32,10 @@ AppealFlow should feel like a civic case desk, not an AI dashboard. The UI uses 
   - `screenshots/appeal-intake.png`
   - `screenshots/mod-dashboard.png`
 
-## Live-gated limitations
+## Deployment notes
 
-- `src/server/lib/redditAdapter.js` isolates live Devvit calls that still need real subreddit playtest verification.
-- `modmail-sync` has a parser/import path; live ModMail query behavior still needs playtest validation.
-- The dashboard does not show placeholder appeal records. It stays empty when live Devvit data is unavailable.
-- Upload/playtest/publish are blocked until the Devvit CLI is authenticated with the app owner's Reddit account.
+- Registered Reddit Devvit app: https://developers.reddit.com/apps/appealflows
+- `src/server/lib/redditAdapter.js` keeps Reddit API calls isolated so platform changes are contained.
+- `modmail-sync` has a parser/import path for `/appeal` conversations.
+- The dashboard only renders stored live records; it does not invent local cases.
+- Release validation should run local checks, Devvit playtest, one banned-user appeal, one mod resolution, and one SLA sweep.

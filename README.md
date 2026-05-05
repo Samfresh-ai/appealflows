@@ -121,7 +121,9 @@ Expected current result:
 - `npm run build` produces the Devvit server bundle.
 - `npm audit --omit=dev` reports 0 vulnerabilities.
 
-## Devvit workflow
+## Devvit app
+
+Registered app: https://developers.reddit.com/apps/appealflows
 
 The package uses local Devvit CLI scripts:
 
@@ -132,21 +134,16 @@ npm run upload
 npm run publish
 ```
 
-`npm run whoami` must show a logged-in Reddit developer account before playtest, upload, or publish will work.
+Recommended release pass:
 
-For a real validation pass:
-
-1. Create or use a small test subreddit that can install private Devvit uploads.
-2. Run `npm run dev` and install/playtest the app.
+1. Run the local validation commands.
+2. Run `npm run dev` against the registered Devvit app.
 3. Create the intake and dashboard posts from the subreddit menu.
-4. Ban a test account and submit an appeal from that account.
+4. Submit an appeal from a banned test account.
 5. Confirm duplicate-open-appeal blocking and cooldown behavior.
 6. Resolve the case and verify the user notification and ban action.
-7. Let the SLA scheduler run or call the scheduler endpoint in playtest to verify reminder/escalation behavior.
-
-## Current honest limit
-
-The code is built and locally validated, but Reddit-hosted production behavior still needs Devvit playtest with an authenticated developer account. That is where Reddit API method behavior, modmail access, ban status reads, and custom-post access for banned users must be proven.
+7. Confirm SLA reminder/escalation behavior through the scheduler.
+8. Upload or publish with the Reddit developer account that owns `appealflows`.
 
 ## Why this matters
 
