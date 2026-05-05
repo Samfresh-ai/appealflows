@@ -1,0 +1,28 @@
+{
+  "name": "appealflows",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A stateful Devvit ban appeal workflow for moderators: structured intake, tracked review, SLA escalation, and humane resolutions.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "devvit-cli playtest",
+    "upload": "devvit-cli upload",
+    "publish": "devvit-cli publish",
+    "whoami": "devvit-cli whoami",
+    "check": "node --check src/shared/state.js && node --check src/shared/templates.js && node --check src/server/lib/appealService.js && node --check src/server/lib/storage.js && node --check src/server/lib/redditAdapter.js && node --check src/server/index.js && node --check public/appeal.js && node --check public/dashboard.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@devvit/web": "0.12.22",
+    "hono": "latest"
+  },
+  "devDependencies": {
+    "@devvit/cli": "0.12.22",
+    "esbuild": "0.25.9"
+  },
+  "overrides": {
+    "protobufjs": "7.5.5"
+  },
+  "license": "BSD-3-Clause"
+}

@@ -1,0 +1,146 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "appealflows",
+  "post": {
+    "dir": "public",
+    "entrypoints": {
+      "default": {
+        "entry": "appeal.html",
+        "height": "tall"
+      },
+      "appeal": {
+        "entry": "appeal.html",
+        "height": "tall"
+      },
+      "dashboard": {
+        "entry": "dashboard.html",
+        "height": "tall"
+      }
+    }
+  },
+  "server": {
+    "entry": "src/server/index.js"
+  },
+  "scripts": {
+    "build": "npm run build"
+  },
+  "permissions": {
+    "redis": true,
+    "reddit": true
+  },
+  "scheduler": {
+    "tasks": {
+      "sla-sweep": {
+        "endpoint": "/internal/scheduler/sla-sweep",
+        "cron": "0 */6 * * *"
+      },
+      "modmail-sync": {
+        "endpoint": "/internal/scheduler/modmail-sync",
+        "cron": "*/15 * * * *"
+      }
+    }
+  },
+  "settings": {
+    "subreddit": {
+      "slaDays": {
+        "type": "number",
+        "label": "SLA window in days",
+        "helpText": "How many days reviewers have before an unresolved appeal escalates. Allowed range: 3-14.",
+        "defaultValue": 7,
+        "validationEndpoint": "/internal/settings/validate-sla-days"
+      },
+      "upheldCooldownDays": {
+        "type": "number",
+        "label": "Cooldown after upheld appeal",
+        "helpText": "How many days a user must wait after an upheld appeal before submitting again.",
+        "defaultValue": 30,
+        "validationEndpoint": "/internal/settings/validate-cooldown-days"
+      },
+      "reviewerPermissions": {
+        "type": "multiSelect",
+        "label": "Moderator permissions that can review appeals",
+        "helpText": "Mods with any selected permission can resolve or escalate appeals. The all permission covers top mods/admin-equivalent reviewers.",
+        "defaultValue": [
+          "all",
+          "mail"
+        ],
+        "options": [
+          {
+            "label": "All permissions",
+            "value": "all"
+          },
+          {
+            "label": "Mail",
+            "value": "mail"
+          },
+          {
+            "label": "Access",
+            "value": "access"
+          },
+          {
+            "label": "Posts",
+            "value": "posts"
+          },
+          {
+            "label": "Config",
+            "value": "config"
+          },
+          {
+            "label": "Wiki",
+            "value": "wiki"
+          },
+          {
+            "label": "Flair",
+            "value": "flair"
+          }
+        ]
+      },
+      "welcomeMessage": {
+        "type": "paragraph",
+        "label": "Welcome message on appeal form",
+        "helpText": "Shown at the top of the banned-user appeal form.",
+        "defaultValue": "Appeals are reviewed by real moderators. Be specific, honest, and concise."
+      },
+      "allowedBanTypes": {
+        "type": "multiSelect",
+        "label": "Ban types allowed to appeal",
+        "helpText": "Choose whether the appeal flow is available to temporary bans, permanent bans, or both.",
+        "defaultValue": [
+          "temporary",
+          "permanent"
+        ],
+        "options": [
+          {
+            "label": "Temporary bans",
+            "value": "temporary"
+          },
+          {
+            "label": "Permanent bans",
+            "value": "permanent"
+          }
+        ]
+      }
+    }
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "Open AppealFlow dashboard",
+        "description": "Create or open the moderator appeal dashboard.",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/open-dashboard"
+      },
+      {
+        "label": "Create AppealFlow entry point",
+        "description": "Create the public appeal intake post for this community.",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/create-intake"
+      }
+    ]
+  },
+  "dev": {
+    "subreddit": "appealflows_dev"
+  }
+}

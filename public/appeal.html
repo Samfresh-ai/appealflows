@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AppealFlow Intake</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="appeal-page">
+    <main class="appeal-shell">
+      <header class="app-topbar light">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <strong>AppealFlow</strong>
+        </div>
+        <div class="top-actions" aria-label="Help and account">
+          <span>Need help?</span>
+          <button class="icon-button" type="button" aria-label="Help">?</button>
+          <button class="icon-button user-icon" type="button" aria-label="Account"></button>
+        </div>
+      </header>
+
+      <section id="intakeStage" class="appeal-content">
+        <div class="intake-copy">
+          <h1>Submit Ban Appeal</h1>
+          <p id="welcomeMessage">We're here to help. Please share the details and we'll review your appeal.</p>
+        </div>
+
+        <section class="receipt-card compact">
+          <div class="mail-illustration" aria-hidden="true"></div>
+          <div>
+            <strong>Before you submit</strong>
+            <p>This opens one live appeal record for the moderation team.</p>
+            <b>No local appeal record is created.</b>
+          </div>
+          <div class="receipt-state">
+            <span>Target response</span>
+            <strong>7 days</strong>
+            <small>after submission</small>
+          </div>
+        </section>
+
+        <div class="status-timeline intake-timeline" aria-label="Appeal progress">
+          <span class="step"><b>1</b><strong>SUBMITTED</strong></span>
+          <span class="step"><b>2</b><strong>ASSIGNED</strong></span>
+          <span class="step"><b>3</b><strong>UNDER REVIEW</strong></span>
+          <span class="step"><b>4</b><strong>RESOLVED</strong></span>
+          <span class="step"><b>5</b><strong>CLOSED</strong></span>
+        </div>
+
+        <form id="appealForm" class="intake-form">
+          <div class="field user-field hidden">
+            <label class="field-label" for="username">Reddit username</label>
+            <input id="username" name="username" placeholder="your-reddit-name" required />
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="contentUrl">
+              <span>1.</span> Which post or comment got you banned? <small>(optional)</small>
+            </label>
+            <div class="input-with-icon">
+              <span aria-hidden="true">link</span>
+              <input id="contentUrl" name="contentUrl" placeholder="https://" />
+            </div>
+            <p class="field-help">Link to the content in question</p>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="rule">
+              <span>2.</span> Which rule applies to your situation? <em>*</em>
+            </label>
+            <select id="rule" name="rule">
+              <option>Not sure</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="whatHappened">
+              <span>3.</span> In your own words, what happened? <em>*</em>
+            </label>
+            <textarea id="whatHappened" name="whatHappened" minlength="100" maxlength="500" required placeholder="Please describe what happened from your perspective."></textarea>
+            <p class="char-row"><span>100-500 characters</span><span><b id="happenedCount">0</b> / 500</span></p>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="reconsiderReason">
+              <span>4.</span> Why do you think this decision should be reconsidered? <em>*</em>
+            </label>
+            <textarea id="reconsiderReason" name="reconsiderReason" minlength="80" maxlength="500" required placeholder="Explain why you believe the ban should be reconsidered."></textarea>
+            <p class="char-row"><span>80-500 characters</span><span><b id="reasonCount">0</b> / 500</span></p>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="futureCommitment">
+              <span>5.</span> What will you do differently going forward? <em>*</em>
+            </label>
+            <textarea id="futureCommitment" name="futureCommitment" minlength="40" maxlength="300" required placeholder="What will you keep in mind to avoid breaking the rules in the future?"></textarea>
+            <p class="char-row"><span>40-300 characters</span><span><b id="futureCount">0</b> / 300</span></p>
+          </div>
+
+          <footer class="form-footer">
+            <p><span class="lock-dot" aria-hidden="true"></span>Your information is private and will only be seen by the moderation team.</p>
+            <button id="submitButton" class="primary-blue" type="submit">Submit Appeal <span aria-hidden="true">send</span></button>
+          </footer>
+        </form>
+      </section>
+
+      <section id="statusStage" class="status-stage hidden" aria-live="polite"></section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+    <script type="module" src="appeal.js"></script>
+  </body>
+</html>

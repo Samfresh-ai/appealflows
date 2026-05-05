@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AppealFlow Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="dashboard-page">
+    <main class="mod-console">
+      <header class="console-header">
+        <div class="brand dark-brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <strong>AppealFlow - Mod Dashboard</strong>
+        </div>
+        <label class="search-box">
+          <span aria-hidden="true"></span>
+          <input type="search" placeholder="Search appeals, users, or IDs..." />
+          <kbd>/ K</kbd>
+        </label>
+        <div class="mod-profile live-context">
+          <span class="avatar" aria-hidden="true">r/</span>
+          <div>
+            <strong>Live Reddit context</strong>
+            <small>Moderator-only data</small>
+          </div>
+        </div>
+      </header>
+
+      <nav class="console-tabs" aria-label="Dashboard sections">
+        <button id="queueTab" class="tab active" type="button" data-view="queue">Queue <span id="queueTotal">0</span></button>
+        <button id="analyticsTab" class="tab" type="button" data-view="analytics">Analytics</button>
+        <button id="settingsTab" class="tab" type="button" data-view="settings">Settings</button>
+      </nav>
+
+      <section class="filter-row" aria-label="Dashboard filters">
+        <button type="button">All Subreddits <span></span></button>
+        <button type="button">All Rules <span></span></button>
+        <button type="button">All SLA <span></span></button>
+        <button type="button">Filters <span></span></button>
+      </section>
+
+      <section id="queueView" class="queue-view">
+        <section id="metricStrip" class="metric-strip" aria-label="Queue metrics"></section>
+
+        <section class="queue-layout">
+          <section class="lane-board" aria-label="Appeal queues">
+            <div class="queue-column">
+              <div class="queue-head"><h2>Needs Action</h2><span id="needsCount" class="count red">0</span></div>
+              <div id="needsAction" class="cards-list"></div>
+              <button class="view-all" type="button">View all</button>
+            </div>
+            <div class="queue-column">
+              <div class="queue-head"><h2>Team Queue</h2><span id="teamCount" class="count amber">0</span></div>
+              <div id="teamQueue" class="cards-list"></div>
+              <button class="view-all" type="button">View all</button>
+            </div>
+            <div class="queue-column closed-lane">
+              <div class="queue-head"><h2>Closed</h2><span id="closedCount" class="count green">0</span></div>
+              <div id="closedQueue" class="cards-list"></div>
+              <button class="view-all" type="button">View all</button>
+            </div>
+          </section>
+
+          <section id="detail" class="detail-panel" aria-label="Appeal detail"></section>
+        </section>
+      </section>
+
+      <section id="analyticsView" class="analytics-view hidden">
+        <section id="analyticsSummary" class="analytics-summary" aria-label="Appeal analytics"></section>
+        <section class="analytics-grid">
+          <div class="analytics-card volume-card">
+            <div class="analytics-card-head"><h2>Appeal Volume Over Time</h2><button type="button">Daily</button></div>
+            <div id="volumeChart" class="line-chart"></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-card-head"><h2>Outcome Breakdown</h2></div>
+            <div id="outcomeBreakdown" class="metric-list"></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-card-head"><h2>Rule Distribution</h2><button type="button">By Rule</button></div>
+            <div id="ruleDistribution" class="metric-list"></div>
+          </div>
+          <div class="analytics-card mod-performance">
+            <div class="analytics-card-head"><h2>Moderator Performance</h2></div>
+            <div id="perModStats" class="metric-list"></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="settingsView" class="settings-view hidden">
+        <div class="analytics-card">
+          <h2>Install Settings</h2>
+          <p class="muted-text">SLA window, cooldown, reviewer permissions, welcome copy, and allowed ban types are managed in Devvit app settings for each subreddit installation.</p>
+        </div>
+      </section>
+    </main>
+
+    <div id="modalRoot" class="modal-root hidden"></div>
+    <div id="toast" class="toast dark-toast hidden"></div>
+    <script type="module" src="dashboard.js"></script>
+  </body>
+</html>
