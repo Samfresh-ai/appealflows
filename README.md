@@ -37,15 +37,15 @@ Every transition is timestamped and stored in the case history. Invalid transiti
 
 ### Appeal intake
 
-![Appeal intake](screenshots/appeal-intake.png)
+![Appeal intake](https://raw.githubusercontent.com/Samfresh-ai/appealflows/main/screenshots/appeal-intake.png)
 
 ### Moderator dashboard
 
-![Moderator dashboard](screenshots/mod-dashboard.png)
+![Moderator dashboard](https://raw.githubusercontent.com/Samfresh-ai/appealflows/main/screenshots/mod-dashboard.png)
 
 ### Mobile intake
 
-![Mobile appeal intake](screenshots/appeal-intake-mobile.png)
+![Mobile appeal intake](https://raw.githubusercontent.com/Samfresh-ai/appealflows/main/screenshots/appeal-intake-mobile.png)
 
 ## Architecture
 
