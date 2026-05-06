@@ -147,7 +147,7 @@ Recommended release pass:
 
 ## Why this matters
 
-Good moderation is not just removal speed. It is consistency, accountability, and closure. AppealFlow gives mod teams a process they can measure and gives banned users a clear answer instead of a forgotten thread.
+Good moderation is not only removal speed. It is also consistency, accountability, and closure. AppealFlow gives mod teams a process they can measure and gives banned users a clear answer instead of a forgotten thread.
 
 ## Official references
 
