@@ -15,16 +15,8 @@
         </div>
         <label class="search-box">
           <span aria-hidden="true"></span>
-          <input type="search" placeholder="Search appeals, users, or IDs..." />
-          <kbd>/ K</kbd>
+          <input id="searchInput" type="search" placeholder="Search appeals, users, or IDs..." />
         </label>
-        <div class="mod-profile live-context">
-          <span class="avatar" aria-hidden="true">r/</span>
-          <div>
-            <strong>Live Reddit context</strong>
-            <small>Moderator-only data</small>
-          </div>
-        </div>
       </header>
 
       <nav class="console-tabs" aria-label="Dashboard sections">
@@ -34,10 +26,38 @@
       </nav>
 
       <section class="filter-row" aria-label="Dashboard filters">
-        <button type="button">All Subreddits <span></span></button>
-        <button type="button">All Rules <span></span></button>
-        <button type="button">All SLA <span></span></button>
-        <button type="button">Filters <span></span></button>
+        <label>
+          <span>Community</span>
+          <select id="subredditFilter">
+            <option value="">All communities</option>
+          </select>
+        </label>
+        <label>
+          <span>Rule</span>
+          <select id="ruleFilter">
+            <option value="">All rules</option>
+          </select>
+        </label>
+        <label>
+          <span>SLA</span>
+          <select id="slaFilter">
+            <option value="">Any SLA</option>
+            <option value="overdue">Overdue</option>
+            <option value="due-soon">Due soon</option>
+            <option value="on-track">On track</option>
+            <option value="closed">Closed</option>
+          </select>
+        </label>
+        <label>
+          <span>Outcome</span>
+          <select id="outcomeFilter">
+            <option value="">All outcomes</option>
+            <option value="UPHELD">Upheld</option>
+            <option value="REDUCED">Reduced</option>
+            <option value="OVERTURNED">Overturned</option>
+          </select>
+        </label>
+        <button id="clearFilters" class="clear-filters" type="button">Clear</button>
       </section>
 
       <section id="queueView" class="queue-view">

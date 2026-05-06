@@ -167,6 +167,67 @@ test('modmail sync imports parseable appeal inputs once', async () => {
   assert.equal(second.results[0].action, 'skipped-existing');
 });
 
+test('assignment still succeeds when moderator notification fails', async () => {
+  const store = new MemoryAppealStore();
+  const warnings = [];
+  const service = new AppealService({
+    store,
+    redditAdapter: fakeRedditAdapter({
+      findBestReviewer: async () => 'sam_mod',
+      notifyMod: async () => {
+        throw new Error('modmail unavailable');
+      },
+    }),
+    logger: { warn: (...args) => warnings.push(args) },
+  });
+
+  const result = await service.createAppeal(validInput);
+  assert.equal(result.ok, true);
+  assert.equal(result.appeal.state, AppealState.ASSIGNED);
+  assert.equal(result.appeal.assignedTo, 'sam_mod');
+  assert.equal(warnings.length, 1);
+});
+
+test('modmail sync reports upstream failures without throwing', async () => {
+  const warnings = [];
+  const service = new AppealService({
+    store: new MemoryAppealStore(),
+    redditAdapter: fakeRedditAdapter({
+      findModmailAppealInputs: async () => {
+        throw new Error('modmail fetch failed');
+      },
+    }),
+    logger: { warn: (...args) => warnings.push(args) },
+  });
+
+  const result = await service.syncModmailAppeals();
+  assert.equal(result.checked, 0);
+  assert.equal(result.imported, 0);
+  assert.equal(result.error, 'modmail fetch failed');
+  assert.equal(warnings.length, 1);
+});
+
+test('closed decisions persist when user notification delivery fails', async () => {
+  const submitted = createAppealRecord(validInput, { slaDays: 7 }, new Date('2026-05-05T00:00:00.000Z'));
+  const assigned = { ...transitionAppeal(submitted, AppealState.ASSIGNED, 'system'), assignedTo: 'sam_mod' };
+  const warnings = [];
+  const service = new AppealService({
+    store: new MemoryAppealStore([assigned]),
+    redditAdapter: fakeRedditAdapter({
+      notifyUser: async () => {
+        throw new Error('user modmail failed');
+      },
+    }),
+    clock: () => new Date('2026-05-06T00:00:00.000Z'),
+    logger: { warn: (...args) => warnings.push(args) },
+  });
+
+  const closed = await service.resolve(assigned.id, 'sam_mod', 'UPHELD', 'The ban stands after review.');
+  assert.equal(closed.state, AppealState.CLOSED);
+  assert.equal(closed.deliveryError, 'user modmail failed');
+  assert.equal(warnings.length, 1);
+});
+
 function fakeRedditAdapter(overrides = {}) {
   return {
     canUserSubmitAppeal: async () => ({ ok: true }),

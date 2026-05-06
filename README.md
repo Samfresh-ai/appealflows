@@ -117,7 +117,7 @@ npm audit --omit=dev
 Expected current result:
 
 - `npm run check` passes.
-- `npm test` passes 11 tests.
+- `npm test` passes 14 tests.
 - `npm run build` produces the Devvit server bundle.
 - `npm audit --omit=dev` reports 0 vulnerabilities.
 

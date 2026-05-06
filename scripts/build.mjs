@@ -15,9 +15,9 @@ await build({
   entryPoints: [join(root, 'src', 'server', 'index.js')],
   outfile: outputFile,
   bundle: true,
-  format: 'esm',
+  format: 'cjs',
   platform: 'node',
-  target: 'es2022',
+  target: 'es2020',
   sourcemap: true,
   logLevel: 'info',
 });

@@ -834,7 +834,7 @@ input:focus, textarea:focus, select:focus {
 .dark-brand .brand-mark { filter: saturate(1.2); }
 .search-box {
   display: grid;
-  grid-template-columns: 22px minmax(180px, 1fr) auto;
+  grid-template-columns: 22px minmax(180px, 1fr);
   align-items: center;
   width: min(430px, 38vw);
   min-width: 260px;
@@ -963,11 +963,24 @@ kbd {
   font-size: 0.78rem;
 }
 .filter-row {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: minmax(136px, 1.2fr) minmax(136px, 1fr) minmax(112px, 0.76fr) minmax(136px, 1fr) minmax(72px, auto);
+  align-items: end;
   gap: 10px;
   padding: 14px 24px 0;
 }
+.filter-row label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.filter-row label > span {
+  color: var(--dark-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.filter-row select,
 .filter-row button,
 .analytics-card-head button {
   min-height: 36px;
@@ -977,7 +990,6 @@ kbd {
   color: var(--dark-text);
   padding: 0 14px;
 }
-.filter-row span,
 .analytics-card-head button::after {
   display: inline-block;
   width: 8px;
@@ -987,6 +999,14 @@ kbd {
   border-bottom: 2px solid currentColor;
   transform: rotate(45deg) translateY(-2px);
   content: "";
+}
+.filter-row select {
+  width: 100%;
+  min-width: 0;
+}
+.clear-filters {
+  width: 100%;
+  min-width: 72px;
 }
 .queue-view,
 .analytics-view,
@@ -1267,14 +1287,23 @@ kbd {
   background: #9fb0c7;
 }
 .back-button::before {
-  left: 9px;
-  top: 9px;
+  left: 10px;
+  top: 10px;
   width: 12px;
   height: 12px;
   border-left: 2px solid #9fb0c7;
   border-bottom: 2px solid #9fb0c7;
   background: transparent;
   transform: rotate(45deg);
+}
+.back-button::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 15px;
+  width: 17px;
+  height: 2px;
+  background: #9fb0c7;
 }
 .close-button::before,
 .close-button::after,
@@ -1757,6 +1786,12 @@ kbd {
   .mod-row { grid-template-columns: 28px minmax(130px, 1fr) 70px 100px; }
   .mod-row span:nth-child(5),
   .mod-row span:nth-child(6) { display: none; }
+  .filter-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .clear-filters {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1790,9 +1825,9 @@ kbd {
     overflow-x: auto;
   }
   .filter-row {
-    justify-content: start;
-    overflow-x: auto;
+    grid-template-columns: minmax(0, 1fr);
   }
+  .clear-filters { grid-column: auto; }
   .queue-view,
   .analytics-view,
   .settings-view { padding: 16px; }

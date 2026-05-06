@@ -7,6 +7,7 @@ const els = {
   needsAction: document.querySelector('#needsAction'),
   teamQueue: document.querySelector('#teamQueue'),
   closedQueue: document.querySelector('#closedQueue'),
+  clearFilters: document.querySelector('#clearFilters'),
   needsCount: document.querySelector('#needsCount'),
   teamCount: document.querySelector('#teamCount'),
   closedCount: document.querySelector('#closedCount'),
@@ -18,7 +19,13 @@ const els = {
   outcomeBreakdown: document.querySelector('#outcomeBreakdown'),
   ruleDistribution: document.querySelector('#ruleDistribution'),
   perModStats: document.querySelector('#perModStats'),
+  outcomeFilter: document.querySelector('#outcomeFilter'),
+  ruleFilter: document.querySelector('#ruleFilter'),
+  searchInput: document.querySelector('#searchInput'),
+  slaFilter: document.querySelector('#slaFilter'),
+  subredditFilter: document.querySelector('#subredditFilter'),
   tabs: document.querySelectorAll('[data-view]'),
+  viewAllButtons: document.querySelectorAll('.view-all'),
 };
 
 const EMPTY_DASHBOARD = Object.freeze({
@@ -40,6 +47,13 @@ const EMPTY_DASHBOARD = Object.freeze({
 let state = structuredClone(EMPTY_DASHBOARD);
 let activeId = null;
 let activeView = 'queue';
+const filters = {
+  outcome: '',
+  rule: '',
+  search: '',
+  sla: '',
+  subreddit: '',
+};
 
 els.tabs.forEach((button) => {
   button.addEventListener('click', () => {
@@ -47,6 +61,44 @@ els.tabs.forEach((button) => {
     render();
   });
 });
+
+els.searchInput.addEventListener('input', () => {
+  filters.search = els.searchInput.value.trim().toLowerCase();
+  activeId = null;
+  render();
+});
+
+[els.subredditFilter, els.ruleFilter, els.slaFilter, els.outcomeFilter].forEach((select) => {
+  select.addEventListener('change', () => {
+    filters.subreddit = els.subredditFilter.value;
+    filters.rule = els.ruleFilter.value;
+    filters.sla = els.slaFilter.value;
+    filters.outcome = els.outcomeFilter.value;
+    activeId = null;
+    render();
+  });
+});
+
+els.clearFilters.addEventListener('click', clearDashboardFilters);
+
+els.viewAllButtons.forEach((button) => {
+  button.addEventListener('click', clearDashboardFilters);
+});
+
+function clearDashboardFilters() {
+  filters.search = '';
+  filters.subreddit = '';
+  filters.rule = '';
+  filters.sla = '';
+  filters.outcome = '';
+  els.searchInput.value = '';
+  els.subredditFilter.value = '';
+  els.ruleFilter.value = '';
+  els.slaFilter.value = '';
+  els.outcomeFilter.value = '';
+  activeId = null;
+  render();
+}
 
 init();
 
@@ -66,24 +118,81 @@ async function init() {
 }
 
 function render(emptyReason = '') {
+  renderFilterOptions();
+  const filtered = filteredDashboard();
   renderView();
   renderMetricStrip(state.analytics);
   renderAnalytics(state.analytics);
-  renderColumn(els.needsAction, state.needsAction, 'needs');
-  renderColumn(els.teamQueue, state.teamQueue, 'team');
-  renderColumn(els.closedQueue, state.closed, 'closed');
+  renderColumn(els.needsAction, filtered.needsAction, 'needs');
+  renderColumn(els.teamQueue, filtered.teamQueue, 'team');
+  renderColumn(els.closedQueue, filtered.closed, 'closed');
 
-  els.needsCount.textContent = state.needsAction.length;
-  els.teamCount.textContent = state.teamQueue.length;
-  els.closedCount.textContent = state.closed.length;
-  els.queueTotal.textContent = state.needsAction.length + state.teamQueue.length;
+  els.needsCount.textContent = filtered.needsAction.length;
+  els.teamCount.textContent = filtered.teamQueue.length;
+  els.closedCount.textContent = filtered.closed.length;
+  els.queueTotal.textContent = filtered.needsAction.length + filtered.teamQueue.length;
 
-  const active = findAppeal(activeId) || state.needsAction[0] || state.teamQueue[0] || state.closed[0];
+  const active = activeId ? findAppeal(activeId) : null;
   if (active) {
     renderDetail(active);
   } else {
-    renderEmptyDetail(emptyReason);
+    renderEmptyDetail(emptyReason, filtered);
   }
+}
+
+function renderFilterOptions() {
+  const appeals = allAppeals();
+  setSelectOptions(
+    els.subredditFilter,
+    [{ value: '', label: 'All communities' }, ...uniqueOptions(appeals.map((appeal) => appeal.subredditName).filter(Boolean), (value) => `r/${value}`)],
+    filters.subreddit
+  );
+  setSelectOptions(
+    els.ruleFilter,
+    [{ value: '', label: 'All rules' }, ...uniqueOptions(appeals.map((appeal) => appeal.intake?.rule || appeal.context?.originalBanReason || 'Not sure'))],
+    filters.rule
+  );
+  els.slaFilter.value = filters.sla;
+  els.outcomeFilter.value = filters.outcome;
+}
+
+function filteredDashboard() {
+  return {
+    needsAction: filterAppeals(state.needsAction),
+    teamQueue: filterAppeals(state.teamQueue),
+    closed: filterAppeals(state.closed),
+  };
+}
+
+function filterAppeals(appeals) {
+  return appeals.filter((appeal) => {
+    if (filters.subreddit && appeal.subredditName !== filters.subreddit) return false;
+    const rule = appeal.intake?.rule || appeal.context?.originalBanReason || 'Not sure';
+    if (filters.rule && rule !== filters.rule) return false;
+    if (filters.outcome && appeal.outcome !== filters.outcome) return false;
+    if (filters.sla && slaFilterValue(appeal) !== filters.sla) return false;
+    if (!filters.search) return true;
+    const haystack = [
+      appeal.id,
+      appeal.username,
+      appeal.subredditName,
+      rule,
+      appeal.outcome,
+      appeal.state,
+      appeal.intake?.whatHappened,
+      appeal.intake?.reconsiderReason,
+      appeal.intake?.futureCommitment,
+    ].join(' ').toLowerCase();
+    return haystack.includes(filters.search);
+  });
+}
+
+function slaFilterValue(appeal) {
+  if (appeal.state === 'CLOSED') return 'closed';
+  const sla = appeal.sla || localSla(appeal);
+  if (sla.tone === 'danger') return 'overdue';
+  if (sla.tone === 'warning') return 'due-soon';
+  return 'on-track';
 }
 
 function renderView() {
@@ -284,14 +393,23 @@ function renderDetail(appeal) {
     ${isClosed ? closedDetail(appeal) : canAct ? actionBlock() : readOnlyBlock(appeal)}
   `;
 
+  els.detail.querySelectorAll('.back-button, .close-button').forEach((button) => {
+    button.addEventListener('click', closeDetail);
+  });
   if (!isClosed && canAct) wireActions(appeal);
 }
 
-function renderEmptyDetail(reason) {
+function renderEmptyDetail(reason, filtered = filteredDashboard()) {
+  const visible = filtered.needsAction.length + filtered.teamQueue.length + filtered.closed.length;
+  const copy = reason || (visible
+    ? 'Select an appeal to review its answers, context, decision history, and available actions.'
+    : activeFilterCount()
+      ? 'No appeals match the active filters. Clear filters or adjust the search.'
+      : 'When a banned user submits an appeal, it will appear here with its Reddit context, SLA, owner, and valid actions.');
   els.detail.innerHTML = `
     <section class="empty-detail">
       <h2>No case selected</h2>
-      <p>${escapeHtml(reason || 'When a banned user submits an appeal, it will appear here with its Reddit context, SLA, owner, and valid actions.')}</p>
+      <p>${escapeHtml(copy)}</p>
     </section>
   `;
 }
@@ -521,11 +639,18 @@ async function takeAction(appeal, action, note, durationDays) {
       throw new Error(error.error || 'Live action failed.');
     }
     closeModal();
+    activeId = null;
     showToast('Action saved. The user notification has been queued.');
     await init();
   } catch (error) {
     showToast(`${error.message} Nothing was changed.`);
   }
+}
+
+function closeDetail() {
+  activeId = null;
+  document.querySelectorAll('.case-card').forEach((item) => item.classList.remove('active'));
+  renderEmptyDetail('', filteredDashboard());
 }
 
 function noteTemplate(action) {
@@ -542,7 +667,11 @@ function confirmationCopy(action) {
 }
 
 function localSla(appeal) {
-  if (appeal.state === 'CLOSED') return { label: 'Uphold', tone: 'good' };
+  if (appeal.state === 'CLOSED') {
+    const outcome = appeal.outcome || 'CLOSED';
+    const tone = outcome === 'UPHELD' ? 'danger' : outcome === 'REDUCED' ? 'warning' : 'good';
+    return { label: outcomeName(outcome), tone };
+  }
   const hours = Math.round((new Date(appeal.slaDueAt) - Date.now()) / 36e5);
   if (!Number.isFinite(hours)) return { label: '5 days', tone: 'good' };
   if (hours < 0) return { label: 'Overdue', tone: 'danger' };
@@ -585,15 +714,20 @@ function legendMarkup(rows, includeCounts = false) {
 
 function barRows(rows, withCounts = false) {
   if (!rows.length) return '<p class="empty-copy">No rule data yet.</p>';
+  const totalCount = rows.reduce((sum, row) => sum + Number(row.count || 0), 0);
   return `
     <div class="bar-rows">
-      ${rows.map((row) => `
-        <p>
-          <span>${escapeHtml(row.label || row.rule || 'Other')}</span>
-          <b><i style="width:${clampPercent(row.percent ?? row.value ?? 0)}%"></i></b>
-          <strong>${escapeHtml(row.percent ?? row.value ?? 0)}%${withCounts && row.count ? ` (${escapeHtml(row.count)})` : ''}</strong>
-        </p>
-      `).join('')}
+      ${rows.map((row) => {
+        const count = Number(row.count || 0);
+        const percent = row.percent ?? row.value ?? (totalCount ? Math.round((count / totalCount) * 100) : 0);
+        return `
+          <p>
+            <span>${escapeHtml(row.label || row.rule || 'Other')}</span>
+            <b><i style="width:${clampPercent(percent)}%"></i></b>
+            <strong>${escapeHtml(percent)}%${withCounts && row.count ? ` (${escapeHtml(row.count)})` : ''}</strong>
+          </p>
+        `;
+      }).join('')}
     </div>
   `;
 }
@@ -704,6 +838,29 @@ function addDays(date, days) {
   const next = new Date(date);
   next.setDate(next.getDate() + Number(days || 0));
   return next;
+}
+
+function allAppeals() {
+  return [...state.needsAction, ...state.teamQueue, ...state.closed];
+}
+
+function activeFilterCount() {
+  return Object.values(filters).filter(Boolean).length;
+}
+
+function uniqueOptions(values, labelFor = (value) => value) {
+  return [...new Set(values.filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b)))
+    .map((value) => ({ value, label: labelFor(value) }));
+}
+
+function setSelectOptions(select, options, selectedValue) {
+  const current = options.some((option) => option.value === selectedValue) ? selectedValue : '';
+  select.innerHTML = options.map((option) => `
+    <option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>
+  `).join('');
+  select.value = current;
+  if (selectedValue && !current) filters[select.id.replace('Filter', '')] = '';
 }
 
 async function safeJson(response) {

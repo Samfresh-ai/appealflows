@@ -14,11 +14,12 @@ import {
 import { buildAssignmentNotice, buildResolutionMessage, buildSlaReminder } from '../../shared/templates.js';
 
 export class AppealService {
-  constructor({ store, redditAdapter, settings = DEFAULT_SETTINGS, clock = () => new Date() }) {
+  constructor({ store, redditAdapter, settings = DEFAULT_SETTINGS, clock = () => new Date(), logger = console }) {
     this.store = store;
     this.reddit = redditAdapter;
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
     this.clock = clock;
+    this.logger = logger;
   }
 
   async createAppeal(input) {
@@ -90,13 +91,17 @@ export class AppealService {
     if (!reviewer) {
       const escalated = transitionAppeal(appeal, AppealState.ESCALATED, 'system', 'No active reviewer available.', this.clock());
       const saved = await this.store.save({ ...escalated, escalatedAt: this.clock().toISOString() });
-      await this.reddit.notifyModTeam(saved, 'Appeal escalated: no active reviewer was available.');
+      await this.safeSideEffect('notify mod team about unassigned appeal', () => (
+        this.reddit.notifyModTeam(saved, 'Appeal escalated: no active reviewer was available.')
+      ));
       return { ok: true, appeal: saved };
     }
 
     const assigned = transitionAppeal(appeal, AppealState.ASSIGNED, 'system', `Assigned to u/${reviewer}.`, this.clock());
     const saved = await this.store.save({ ...assigned, assignedTo: reviewer });
-    await this.reddit.notifyMod(reviewer, buildAssignmentNotice(saved, reviewer), saved);
+    await this.safeSideEffect('notify assigned moderator', () => (
+      this.reddit.notifyMod(reviewer, buildAssignmentNotice(saved, reviewer), saved)
+    ));
     return { ok: true, appeal: saved };
   }
 
@@ -175,7 +180,9 @@ export class AppealService {
     this.assertActorCanWorkCase(appeal, actor);
     const next = transitionAppeal(appeal, AppealState.ESCALATED, actor, note, this.clock());
     const saved = await this.store.save({ ...next, escalatedAt: this.clock().toISOString(), assignedTo: null });
-    await this.reddit.notifyModTeam(saved, `Appeal escalated by u/${actor}: ${note}`);
+    await this.safeSideEffect('notify mod team about manual escalation', () => (
+      this.reddit.notifyModTeam(saved, `Appeal escalated by u/${actor}: ${note}`)
+    ));
     return saved;
   }
 
@@ -199,8 +206,10 @@ export class AppealService {
       settings: this.settings,
       now,
     });
-    await this.reddit.notifyUser(closed, message);
-    return this.store.save(closed);
+    const deliveryError = await this.safeSideEffect('notify user about appeal resolution', () => (
+      this.reddit.notifyUser(closed, message)
+    ));
+    return this.store.save(deliveryError ? { ...closed, deliveryError } : closed);
   }
 
   async ensureReviewing(appeal, actor) {
@@ -234,7 +243,9 @@ export class AppealService {
           : appeal;
         const escalated = transitionAppeal(stale, AppealState.ESCALATED, 'system', 'SLA breached; auto-escalated.', now);
         const saved = await this.store.save({ ...escalated, assignedTo: null, escalatedAt: now.toISOString() });
-        await this.reddit.notifyModTeam(saved, `Appeal ${saved.id} breached SLA and was escalated.`);
+        await this.safeSideEffect('notify mod team about SLA escalation', () => (
+          this.reddit.notifyModTeam(saved, `Appeal ${saved.id} breached SLA and was escalated.`)
+        ));
         actions.push({ appealId: appeal.id, action: 'escalated' });
         continue;
       }
@@ -243,7 +254,9 @@ export class AppealService {
         const escalatedHours = (now - new Date(appeal.escalatedAt)) / 36e5;
         if (escalatedHours >= this.settings.escalationAfterHours) {
           const saved = await this.store.save({ ...appeal, adminEscalationNotifiedAt: now.toISOString(), updatedAt: now.toISOString() });
-          await this.reddit.notifyModTeam(saved, `Appeal ${saved.id} has been escalated for ${Math.round(escalatedHours)}h without resolution. Mods with full permissions should take ownership.`);
+          await this.safeSideEffect('notify admins about long escalation', () => (
+            this.reddit.notifyModTeam(saved, `Appeal ${saved.id} has been escalated for ${Math.round(escalatedHours)}h without resolution. Mods with full permissions should take ownership.`)
+          ));
           actions.push({ appealId: appeal.id, action: 'admin-notified' });
           continue;
         }
@@ -251,7 +264,9 @@ export class AppealService {
 
       if (!sla.overdue && sla.hoursRemaining <= this.settings.reminderHoursBeforeSla && appeal.assignedTo && !appeal.slaReminderSentAt) {
         const saved = await this.store.save({ ...appeal, slaReminderSentAt: now.toISOString(), updatedAt: now.toISOString() });
-        await this.reddit.notifyMod(appeal.assignedTo, buildSlaReminder(saved), saved);
+        await this.safeSideEffect('notify assigned moderator about SLA reminder', () => (
+          this.reddit.notifyMod(appeal.assignedTo, buildSlaReminder(saved), saved)
+        ));
         actions.push({ appealId: appeal.id, action: 'reminded' });
       }
     }
@@ -260,7 +275,19 @@ export class AppealService {
   }
 
   async syncModmailAppeals() {
-    const inputs = await this.reddit.findModmailAppealInputs();
+    let inputs;
+    try {
+      inputs = await this.reddit.findModmailAppealInputs();
+    } catch (error) {
+      const message = errorToMessage(error);
+      this.logger.warn?.('[AppealFlow] modmail appeal sync failed', error);
+      return {
+        checked: 0,
+        imported: 0,
+        results: [],
+        error: message,
+      };
+    }
     const results = [];
 
     for (const input of inputs) {
@@ -270,13 +297,21 @@ export class AppealService {
         continue;
       }
 
-      const result = await this.createAppeal(input);
-      results.push({
-        conversationId,
-        action: result.ok ? 'imported' : 'rejected',
-        appealId: result.appeal?.id,
-        errors: result.errors,
-      });
+      try {
+        const result = await this.createAppeal(input);
+        results.push({
+          conversationId,
+          action: result.ok ? 'imported' : 'rejected',
+          appealId: result.appeal?.id,
+          errors: result.errors,
+        });
+      } catch (error) {
+        results.push({
+          conversationId,
+          action: 'failed',
+          errors: [errorToMessage(error)],
+        });
+      }
     }
 
     return {
@@ -290,6 +325,17 @@ export class AppealService {
     const appeal = await this.store.get(id);
     if (!appeal) throw new Error(`Appeal not found: ${id}`);
     return appeal;
+  }
+
+  async safeSideEffect(label, callback) {
+    try {
+      await callback();
+      return null;
+    } catch (error) {
+      const message = errorToMessage(error);
+      this.logger.warn?.(`[AppealFlow] ${label} failed`, error);
+      return message;
+    }
   }
 }
 
@@ -396,4 +442,8 @@ function formatDate(value) {
     month: 'long',
     day: 'numeric',
   });
+}
+
+function errorToMessage(error) {
+  return error instanceof Error ? error.message : String(error || 'Unknown error');
 }
